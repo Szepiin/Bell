@@ -4,6 +4,7 @@ import tkinter as tk
 from CTkSpinbox import * # Zakładam, że CTkSpinbox jest poprawnie zaimportowany i działa
 import clockHandling # Zakładam, że clockHandling jest poprawnie zaimportowany
 import time
+import threading
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,23 +19,28 @@ class NotificationPopup(ctk.CTkToplevel):
     Niestandardowe okno pop-up do wyświetlania krótkich komunikatów.
     Zamyka się automatycznie po określonym czasie lub po kliknięciu.
     """
-    def __init__(self, master, message, duration_ms=3000, color="white"):
+    def __init__(self, master, message, duration_ms=2500, color="white"):
         super().__init__(master)
         self.master = master
         self.overrideredirect(True)  # Usuwa ramkę okna i przyciski systemowe
         self.attributes("-topmost", True)  # Zawsze na wierzchu innych okien aplikacji
 
-        self.label = ctk.CTkLabel(self, text=message, font=("Calibri", 20, "bold"), text_color=color)
-        self.label.pack(padx=20, pady=20)
+        self.label = ctk.CTkLabel(self, text=message, font=("Calibri", 40, "bold"), text_color=color, anchor="center")
+        self.label.pack(fill="both", expand=True, padx=20, pady=20)
         
         self.grab_set() # Zablokuj interakcję z innymi oknami aplikacji, dopóki pop-up jest otwarty
         self.bind("<Button-1>", self.close_popup) # Zamyka po kliknięciu
 
-        # Wyśrodkowanie okna pop-up względem okna głównego
+        # Umieszczenie pop-upu dokładnie nad oknem głównym
         self.update_idletasks()
-        self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
+        master_x = self.master.winfo_rootx()
+        master_y = self.master.winfo_rooty()
+        master_w = self.master.winfo_width()
+        master_h = self.master.winfo_height()
+        self.geometry(f"{master_w}x{master_h}+{master_x}+{master_y}")
 
-        self.attributes("-alpha", 0.7)
+
+        self.attributes("-alpha", 0.95)
         self.after(duration_ms, self.close_popup) # Ustaw timer na automatyczne zamknięcie
 
     def close_popup(self, event=None):
@@ -235,19 +241,13 @@ class MainScreen(ctk.CTkFrame):
         self.next_time_label = MyLabel(self.top_frame, text="Następny dzwonek: --:--")
         self.next_time_label.pack(fill="x", pady=3)
 
-        self.schedule_display_frame = ctk.CTkScrollableFrame(self)
+        self.schedule_display_frame = ctk.CTkScrollableFrame(self, height=330)
+        self.schedule_display_frame._scrollbar.configure(width=30)
         self.schedule_display_frame.pack(fill="both", pady=5, padx=2)
         
-        # Konfiguracja kolumn, aby były równej szerokości
-        self.schedule_display_frame.grid_columnconfigure(0, weight=1) 
-        self.schedule_display_frame.grid_columnconfigure(1, weight=1) 
-        # Konfiguracja wierszy, aby etykiety mogły się rozciągać pionowo w swoich komórkach
-        # Będziemy dynamicznie dodawać grid_rowconfigure dla każdego wiersza
 
         self.bell_labels = [] # Lista do przechowywania referencji do etykiet dzwonków
-        # update_display zostanie wywołane przez BellApp.show_frame("main") przy starcie i przejściu na ten ekran
-        for col_idx in range(9):
-            self.schedule_display_frame.grid_columnconfigure(col_idx, weight=1)
+
     def update_display(self, next_occurrence, formatted_schedule_list):
         """
         Aktualizuje wyświetlanie następnego dzwonka i listy dzwonków.
@@ -259,85 +259,49 @@ class MainScreen(ctk.CTkFrame):
     def _update_bell_labels(self, formatted_schedule_list):
         """
         Aktualizuje etykiety dzwonków z równym formatowaniem kolumnowym,
-        rozmieszczając je w dwóch głównych kolumnach z odstępem i bez wewnętrznych linii.
-        Używa oddzielnych ramek dla każdej kolumny (ikona, status, dzwonek, godzina),
-        aby zapewnić niezależne centrowanie i wyrównanie.
+        rozmieszczając je w dwóch głównych kolumnach.
         """
-        #TODO Zamiast parsować tutaj ze sformatowanych danych, można wykorzystać listę data z poszczególnymi wpisami
+        num_entries = len(formatted_schedule_list)
+        num_rows = (num_entries + 1) // 2  # liczba wierszy potrzebna do 2-kolumnowego układu
 
-        # Usuń wszystkie istniejące etykiety i ramki
-        for row_labels in self.bell_labels:
-            for label in row_labels:
-                # Etykieta jest teraz w ramce, więc niszczymy ramkę-rodzica
-                label.master.destroy()
-        self.bell_labels.clear()
+        # Upewnij się, że `bell_labels` ma wystarczającą liczbę etykiet (w układzie [ [label1, label2], ... ])
+        while len(self.bell_labels) < num_rows:
+            row_labels = []
+            for col in range(2):  # 2 kolumny
+                frame = ctk.CTkFrame(self.schedule_display_frame, corner_radius=0)
+                frame.grid(row=len(self.bell_labels), column=col, padx=5, pady=2, sticky="nsew")
 
-        # Resetuj konfigurację wierszy (ważne, aby usunąć poprzednie wagi)
-        for i in range(self.schedule_display_frame.grid_size()[1]):
-            self.schedule_display_frame.grid_rowconfigure(i, weight=0)
+                label = MyLabel(frame, text="", anchor="center", corner_radius=5)
+                label.pack(fill="both", expand=True, padx=5, pady=3)
 
-        num_bells = len(formatted_schedule_list)
-        if num_bells == 0:
-            # Jeśli brak dzwonków, wyświetl odpowiedni komunikat
-            label = MyLabel(self.schedule_display_frame, text="Brak zdefiniowanych dzwonków.")
-            # columnspan ustawione na 9, aby rozciągnąć na wszystkie kolumny
-            label.grid(row=0, column=0, columnspan=9, padx=3, pady=1)
-            self.schedule_display_frame.grid_rowconfigure(0, weight=1)
-            self.bell_labels.append([label]) # Przechowuj jako listę dla spójności
-            return
+                row_labels.append(label)
+            self.bell_labels.append(row_labels)
 
-        # Parsowanie wpisów
-        parsed_schedule = []
-        for entry in formatted_schedule_list:
-            parts = entry.split()
-            icon = parts[0]
-            status = parts[1]
-            time = parts[-1] # Czas jest zawsze ostatnią częścią (np. HH:MM)
-            
-            # Nazwa dzwonka składa się z części między statusem a czasem
-            bell_parts = parts[2:-1]
-            bell = " ".join(bell_parts)
-            
-            # Usuń końcowy dwukropek z nazwy dzwonka, jeśli występuje
-            if bell.endswith(":"):
-                bell = bell[:-1]
-                
-            parsed_schedule.append((icon, status, bell, time))
+        # Aktualizuj/ustaw dane w etykietach
+        for idx, entry in enumerate(formatted_schedule_list):
+            row = idx // 2
+            col = idx % 2
+            label = self.bell_labels[row][col]
+            if label.cget("text") != entry:
+                label.configure(text=entry)
+            label.master.grid()  # pokaż frame jeśli był ukryty
+            label.master.grid_rowconfigure(0, weight=1)
 
-        # Twórz i wyświetlaj etykiety dla każdej kolumny
-        for i, (icon, status, bell, time) in enumerate(parsed_schedule):
-            row_labels_list = [] # Lista etykiet dla bieżącego wiersza
-            
-            # Obliczanie wiersza i głównej kolumny dla bieżącego dzwonka
-            current_row = i // 2
-            # Offset dla drugiej głównej kolumny uwzględnia 4 kolumny pierwszej grupy + 1 kolumnę separatora
-            main_column_offset = (i % 2) * 5 
+        # Ukryj nadmiarowe etykiety (jeśli np. wcześniej było więcej)
+        for idx in range(num_entries, len(self.bell_labels) * 2):
+            row = idx // 2
+            col = idx % 2
+            label = self.bell_labels[row][col]
+            label.configure(text="")
+            label.master.grid_remove()  # ukryj frame
 
-            # Lista danych dla bieżącego dzwonka
-            bell_data = [icon, status, bell, time]
-            
-            for col_idx, data in enumerate(bell_data):
-                # Tworzenie ramki dla każdej komórki BEZ obramowania
-                cell_frame = ctk.CTkFrame(self.schedule_display_frame, corner_radius=0) # Usunięto borderwidth i relief
+        # Ustaw wagę wierszy i kolumn, by równo się rozciągały
+        for row in range(num_rows):
+            self.schedule_display_frame.grid_rowconfigure(row, weight=1)
+        self.schedule_display_frame.grid_columnconfigure(0, weight=1)
+        self.schedule_display_frame.grid_columnconfigure(1, weight=1)
 
-                cell_frame.grid(row=current_row, column=main_column_offset + col_idx, 
-                                padx=0, pady=2, sticky="nsew", ) 
-                
-                # Etykieta wewnątrz ramki
-                label = MyLabel(cell_frame, text=data, anchor="center", corner_radius=5)
-                label.pack(fill="both", expand=True, padx=0, pady=1) # Padding wewnątrz komórki
-                row_labels_list.append(label)
-
-            # Dodanie pustej ramki jako separatora między głównymi kolumnami, jeśli to pierwsza grupa
-            #if i % 2 == 0:
-                #separator_frame = ctk.CTkFrame(self.schedule_display_frame)
-                #separator_frame.grid(row=current_row, column=4, padx=1, pady=0) # Kolumna 4 to separator
-                
-            # Skonfiguruj wiersz tak, aby rozszerzał się równomiernie
-            self.schedule_display_frame.grid_rowconfigure(current_row, weight=1)
-            self.bell_labels.append(row_labels_list)
-
-        logger.debug(f"Zaktualizowano etykiety dzwonków w MainScreen. Liczba dzwonków: {num_bells}")
+        logger.debug(f"Zaktualizowano etykiety dzwonków: {num_entries} pozycji, {num_rows} wierszy.")
 
 class SoundSettings(ctk.CTkFrame):
     """
@@ -398,11 +362,10 @@ class SoundSettings(ctk.CTkFrame):
             self.btnPlayPrebell.configure(state="disabled")
 
         else: # Nic nie gra
-            self.btnPlayBell.configure(text=f"Odtwórz dzwonek\n{self.master.music.musicFileNameBell}", state="normal", fg_color="#1f538d")
-            self.btnPlayPrebell.configure(text=f"Odtwórz przeddzwonek\n{self.master.music.musicFileNamePrebell}", state="normal",fg_color="#1f538d")
+            self.btnPlayBell.configure(text=f"Odtwórz / zatrzymaj\ndzwonek\n{self.master.music.musicFileNameBell}", state="normal", fg_color="#1f538d")
+            self.btnPlayPrebell.configure(text=f"Odtwórz / zatrzymaj\nprzeddzwonek\n{self.master.music.musicFileNamePrebell}", state="normal",fg_color="#1f538d")
             self.btnStartAlarm.configure(text=f"Uruchom alarm:\n{self.master.music.musicFileNameAlarm}", state="normal",fg_color="#e00000")
-            self.btnPlayBell.configure(state="normal")
-            self.btnPlayPrebell.configure(state="normal")
+
 
     def _toggle_bell_btn(self):
         """Obsługuje kliknięcie przycisku dzwonka: zatrzymuje lub odtwarza."""
@@ -541,7 +504,7 @@ class ScheduleTab(ctk.CTkFrame):
 
 
             radio_buttons_frame = ctk.CTkFrame(self)
-            radio_buttons_frame.grid(row=3, column=0, columnspan=3, sticky="ew")
+            radio_buttons_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=5)
             radio_buttons_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
             MyLabel(radio_buttons_frame, text="Czas między dzwonkiem a przeddzwonkiem:").grid(row=0, column=0, columnspan=4, pady=5)
@@ -565,33 +528,49 @@ class ScheduleTab(ctk.CTkFrame):
             #MyButton(self, text="Zapisz zmiany", command=self._save_changes_and_refresh).grid(row=2, column=0, columnspan=2, pady=10)
 
 
-        def _save_changes_and_refresh(self):
-            """Zapisuje zmiany i odświeża widok harmonogramu."""
-            try:
-                hour = self.hour_var.get()
-                minute = self.minute_var.get()
-                if not (0 <= hour <= 23 and 0 <= minute <= 59):
-                    self.master_tab.show_message("Nieprawidłowy czas (godzina/minuta)!", "red")
-                    return
+        def _save_changes_and_refresh_async(self):
+            """Uruchamia zapis zmian w osobnym wątku i pokazuje overlay ładowania."""
+            def save_in_thread():
 
-                self.schedule_data["bellSchedule"][self.index] = f"{hour:02d}:{minute:02d}"
-                self.schedule_data["prebellIntervals"][self.index] = self.interval_var.get()
-                self.schedule_data["bellActive"][self.index] = self.active_var.get()
-                self.schedule.saveScheduleToJson()
-                logger.info(f"Zapisano zmiany dla dzwonka {self.index + 1}.")
-                
+                try:
+                    hour = self.hour_var.get()
+                    minute = self.minute_var.get()
+
+                    self.schedule_data["bellSchedule"][self.index] = f"{hour:02d}:{minute:02d}"
+                    self.schedule_data["prebellIntervals"][self.index] = self.interval_var.get()
+                    self.schedule_data["bellActive"][self.index] = self.active_var.get()
+
+                    # Zapisz dane
+                    self.schedule.saveScheduleToJson()
+                    logger.info(f"Zapisano zmiany dla dzwonka {self.index + 1}.")
+
+                    # Odśwież GUI w wątku głównym
+                    self.schedule_display_after_update()
+
+                except Exception as e:
+                    logger.error(f"Błąd podczas zapisywania zmian dla dzwonka {self.index + 1}: {e}")
+                    self.master_tab.after(0, lambda: self.master_tab.show_message(f"Błąd zapisu: {e}", "red"))
+                finally:
+                    pass
+                    # Ukryj overlay
+                    #self.master_tab.after(0, self._hide_loading_overlay)
+
+            # Pokaż overlay ładowania
+            #self._show_loading_overlay("Zapisywanie...")
+            
+            threading.Thread(target=save_in_thread, daemon=True).start()
+            
+        def schedule_display_after_update(self):
+            def update():
                 self.master_tab.master.frames["main"].update_display(
-                    self.schedule.nextOccurrence, self.schedule.getFormattedScheduleList()
+                    self.schedule.nextOccurrence,
+                    self.schedule.getFormattedScheduleList()
                 )
-                self.master_tab._rebuild_bell_frames() 
-                self.master_tab.show_frame(self.index) 
-                
+                self.master_tab._rebuild_bell_frames()
+                self.master_tab.show_frame(self.index)
                 self.master_tab.show_message("Zmiany zapisane!", "green")
-
-            except Exception as e:
-                logger.error(f"Błąd podczas zapisywania zmian dla dzwonka {self.index + 1}: {e}")
-                self.master_tab.show_message(f"Błąd zapisu: {e}", "red")
-
+            self.master_tab.after(0, update)
+            
 
     def __init__(self, master, schedule):
         super().__init__(master)
@@ -632,7 +611,8 @@ class ScheduleTab(ctk.CTkFrame):
         if self.bell_frames:
             self.show_frame(0)
 
-    def _rebuild_bell_frames(self):
+    def _rebuild_bell_frames_OLD(self):
+        pass
         """Niszczy i ponownie buduje wszystkie ramki dzwonków, odświeżając dane."""
         for frame in self.bell_frames:
             frame.destroy()
@@ -644,6 +624,27 @@ class ScheduleTab(ctk.CTkFrame):
             frame.place(in_=self.container, relx=0, rely=0, relwidth=1, relheight=1)
             self.bell_frames.append(frame)
         logger.info("Ramki dzwonków zostały przebudowane.")
+
+    def _rebuild_bell_frames(self):
+
+        try:
+            schedule_data = self.schedule.data
+            indices = list(range(len(schedule_data["bellSchedule"])))
+
+            for frame in self.bell_frames:
+                frame.destroy()
+            self.bell_frames.clear()
+
+            for i in indices:
+                frame = self.BellFrame(self, i, self.schedule)
+                frame.place(in_=self.container, relx=0, rely=0, relwidth=1, relheight=1)
+                self.bell_frames.append(frame)
+
+            logger.info("Ramki dzwonków przebudowane.")
+        except Exception as e:
+            logger.error(f"Błąd przebudowy ramek: {e}")
+            self.after(0, lambda: self.show_message(f"Błąd: {e}", "red"))
+
 
     def show_frame(self, index):
         """Pokazuje ramkę o podanym indeksie."""
@@ -664,10 +665,11 @@ class ScheduleTab(ctk.CTkFrame):
     def add_frame(self):
         """Dodaje nową ramkę dzwonka i aktualizuje harmonogram."""
         if self.schedule.addSchedule(): 
+            self.show_message("Odświeżanie...")
             self._rebuild_bell_frames()
             self.show_frame(0) 
             self.master.frames["main"].update_display(self.schedule.nextOccurrence, self.schedule.getFormattedScheduleList())
-            self.show_message("Dzwonek dodany pomyślnie!", "green")
+            self.show_message("Dzwonek 1 - 6:00 - dodany pomyślnie!", "green")
         else:
             self.show_message("Nie można dodać więcej dzwonków (maks. 24)!", "red")
         logger.info("Próba dodania dzwonka.")
@@ -682,6 +684,7 @@ class ScheduleTab(ctk.CTkFrame):
 
         deleted_index = self.current_index
         if self.schedule.deleteSchedule(deleted_index):
+            self.show_message("Odświeżanie...")
             self._rebuild_bell_frames() 
             self.master.frames["main"].update_display(self.schedule.nextOccurrence, self.schedule.getFormattedScheduleList())
 
@@ -701,7 +704,8 @@ class ScheduleTab(ctk.CTkFrame):
     def save_current_bell(self):
         """Zapisuje zmiany w aktualnie widocznej ramce dzwonka."""
         if 0 <= self.current_index < len(self.bell_frames):
-            self.bell_frames[self.current_index]._save_changes_and_refresh()
+            self.show_message("Zapisywanie...", color="white")
+            self.bell_frames[self.current_index]._save_changes_and_refresh_async()
         else:
             self.show_message("Brak aktywnego dzwonka do zapisania!", "red")
             logger.warning("Próba zapisania bez aktywnej ramki dzwonka.")
@@ -724,8 +728,9 @@ class ScheduleTab(ctk.CTkFrame):
             logger.info("Pierwszy dzwonek, nie można przejść wstecz.")
 
     def show_message(self, message, color="white"):
-        """Wyświetla komunikat jako pop-up."""
+        """Wyświetla komunikat jako pop-up w głównym wątku."""
         NotificationPopup(self.master, message, color=color)
+
 
 
 

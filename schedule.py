@@ -155,7 +155,7 @@ class scheduleHandling:
             return False # Sygnalizuj, że dodanie się nie powiodło
 
         #default_time = datetime.now().strftime("%H:%M")
-        self.data["bellSchedule"].append("00:00")
+        self.data["bellSchedule"].append("6:00")
         self.data["prebellIntervals"].append(DEFAULT_BELL_INTERVAL)
         self.data["bellActive"].append(True)
 
@@ -197,6 +197,8 @@ class scheduleHandling:
             return ["Brak zdefiniowanych dzwonków"]
 
         for i, time_str in enumerate(self.data["bellSchedule"]):
-            status = "✅ Aktywny" if self.data["bellActive"][i] else "❌ Nieaktywny"
-            formatted_list.append(f"{status} Dzwonek {i + 1}: {time_str}")
+            status = "✅  - " if self.data["bellActive"][i] else "❌  - "
+            
+#            status = "✅         Aktywny -" if self.data["bellActive"][i] else "❌   Nieaktywny -"
+            formatted_list.append(f"{status} Dzwonek {i + 1:02}  -  {time_str}")
         return formatted_list

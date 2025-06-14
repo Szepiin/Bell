@@ -171,6 +171,7 @@ class musicHandling:
         self.stopMusic() # Zatrzymuje cokolwiek gra
         if self._musicFileAlarm:
             threading.Thread(target=self._play_sound_thread, args=(self._musicFileAlarm, True)).start()
+            self._is_alarm_playing = True
         else:
             logger.warning("Brak pliku alarmu do odtworzenia.")
 
