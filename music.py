@@ -5,7 +5,11 @@ import threading
 from mutagen import mp3
 import platform
 import logging
-
+if platform.system() == "Windows":
+    from fake_rpi.RPi import GPIO
+else:
+    import RPi.GPIO as GPIO
+    
 # Konfiguracja logowania dla modułu music
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -80,9 +84,9 @@ class musicHandling:
             logger.info(f"Symulacja: Przekaźnik wzmacniacza ustawiony na: {'Włączony' if state else 'Wyłączony'}")
         else:
             try:
-                # Użycie WiringPi (wymaga zainstalowania i uprawnień)
-                os.system(f"gpio mode {self.AMP_OUTPUT_PIN} out")
-                os.system(f"gpio write {self.AMP_OUTPUT_PIN} {1 if state else 0}")
+                GPIO.setmode(GPIO.BOARD)
+                GPIO.setup(self.AMP_OUTPUT_PIN, GPIO.OUT)
+                GPIO.output(self.AMP_OUTPUT_PIN, GPIO.HIGH if state else GPIO.LOW)
                 logger.info(f"Przekaźnik wzmacniacza GPIO {self.AMP_OUTPUT_PIN} ustawiony na: {'Włączony' if state else 'Wyłączony'}")
             except Exception as e:
                 logger.error(f"Błąd sterowania GPIO {self.AMP_OUTPUT_PIN}: {e}")

@@ -2,7 +2,7 @@ import platform
 import os
 from schedule import scheduleHandling
 from music import musicHandling
-from gui1 import BellApp
+from gui import BellApp
 from constants import AMP_OUTPUT_PIN_GPIO, USB_PATH_LINUX, USB_PATH_WINDOWS, SCREEN_SAVER_TIME_SECONDS
 import logging
 

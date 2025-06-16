@@ -155,7 +155,7 @@ class scheduleHandling:
             return False # Sygnalizuj, że dodanie się nie powiodło
 
         #default_time = datetime.now().strftime("%H:%M")
-        self.data["bellSchedule"].append("6:00")
+        self.data["bellSchedule"].append("06:00")
         self.data["prebellIntervals"].append(DEFAULT_BELL_INTERVAL)
         self.data["bellActive"].append(True)
 
@@ -171,6 +171,7 @@ class scheduleHandling:
             del self.data["bellSchedule"][index]
             del self.data["prebellIntervals"][index]
             del self.data["bellActive"][index]
+            self._sort_schedule()
             self.saveScheduleToJson()
             logger.info(f"Usunięto dzwonek: {deleted_time} (indeks: {index})")
             return True
@@ -192,13 +193,14 @@ class scheduleHandling:
 
     def getFormattedScheduleList(self):
         """Zwraca sformatowaną listę dzwonków."""
+        self._sort_schedule()
         formatted_list = []
         if not self.data["bellSchedule"]:
             return ["Brak zdefiniowanych dzwonków"]
 
         for i, time_str in enumerate(self.data["bellSchedule"]):
-            status = "✅  - " if self.data["bellActive"][i] else "❌  - "
+            status = "✔  - " if self.data["bellActive"][i] else "✖  - "
             
-#            status = "✅         Aktywny -" if self.data["bellActive"][i] else "❌   Nieaktywny -"
+#            status = "✔         Aktywny -" if self.data["bellActive"][i] else "✖   Nieaktywny -"
             formatted_list.append(f"{status} Dzwonek {i + 1:02}  -  {time_str}")
         return formatted_list
