@@ -14,7 +14,7 @@ else:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class musicHandling:
+class musicHandling: #TODO automatyczne wykrywanie dysku USB
     """
     Klasa odpowiedzialna za odtwarzanie dźwięków dzwonków, przeddzwonków i alarmów,
     oraz sterowanie przekaźnikiem wzmacniacza.
@@ -39,8 +39,8 @@ class musicHandling:
         self.musicFileNamePrebell = os.path.basename(self._musicFilePrebell) if self._musicFilePrebell else "Brak pliku"
         self.musicFileNameAlarm = os.path.basename(self._musicFileAlarm) if self._musicFileAlarm else "Brak pliku"
         
-        self._play_lock = threading.Lock() # Blokada dla synchronizacji odtwarzania
-        self._is_alarm_playing = False # Flaga do śledzenia, czy gra alarm
+        self._play_lock = threading.Lock() 
+        self._is_alarm_playing = False 
         self._is_bell_playing = False
         self._is_prebell_playing = False
 

@@ -4,7 +4,7 @@ class MySpinbox(ctk.CTkFrame):
     def __init__(self, master, width=130, height=30, step_size=1, command=None, 
                  variable=None, min_value=None, max_value=None, font=None, **kwargs):
         
-        super().__init__(master, width=width, height=height, **kwargs)
+        super().__init__(master, width=width, height=height, border_width=2, border_color="#2b2b2b", **kwargs)
 
         self.step_size = step_size
         self.command = command
@@ -23,28 +23,25 @@ class MySpinbox(ctk.CTkFrame):
         self.grid_columnconfigure((0, 2), weight=0)
         self.grid_columnconfigure(1, weight=1)
 
-        self.subtract_button = ctk.CTkButton(self, text="-", width=height, height=height,
+        self.subtract_button = ctk.CTkButton(self, text="-", width=height, height=height, font=ctk.CTkFont(size=22, weight='bold'),
                                              command=self._subtract_button_callback)
-        self.subtract_button.grid(row=0, column=0, sticky="nswe")
+        self.subtract_button.grid(row=0, column=0, sticky="nswe", padx=4, pady=4)
 
-        self.entry = ctk.CTkEntry(self, width=width - (2 * height), height=height,
-                                  border_width=0, corner_radius=0, justify="center")
-        self.entry.grid(row=0, column=1, sticky="nswe")
+        self.entry = ctk.CTkEntry(self, width=width - (2 * height), height=height, font=ctk.CTkFont(size=22, weight='bold'),
+                                  border_width=0, bg_color="#2b2b2b", fg_color="#2b2b2b", justify="center")
+        self.entry.grid(row=0, column=1, sticky="nswe", pady=4)
         self.entry.configure(state="readonly")
         if self.font:
             self.entry.configure(font=self.font)
 
-        self.add_button = ctk.CTkButton(self, text="+", width=height, height=height,
+        self.add_button = ctk.CTkButton(self, text="+", width=height, height=height, font=ctk.CTkFont(size=22, weight='bold'),
                                         command=self._add_button_callback)
-        self.add_button.grid(row=0, column=2, sticky="nswe")
+        self.add_button.grid(row=0, column=2, sticky="nswe", padx=4, pady=4)
 
-        self.subtract_button.configure(fg_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkButton"]["fg_color"]),
-                                       hover_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkButton"]["hover_color"]))
-        self.add_button.configure(fg_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkButton"]["fg_color"]),
-                                  hover_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkButton"]["hover_color"]))
-        self.entry.configure(fg_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkEntry"]["fg_color"]),
+        self.subtract_button.configure(fg_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkButton"]["fg_color"]), hover=False)
+        self.add_button.configure(fg_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkButton"]["fg_color"]), hover=False)
+        self.entry.configure(fg_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkFrame"]["fg_color"]),
                              text_color=self._apply_appearance_mode(ctk.ThemeManager.theme["CTkEntry"]["text_color"]))
-        
         self._update_entry_from_variable()
 
     # Dodaj metodę do zarządzania śledzeniem
@@ -71,13 +68,8 @@ class MySpinbox(ctk.CTkFrame):
         if self.min_value is not None and new_value < self.min_value:
             new_value = self.max_value if self.max_value is not None else self.min_value
         if self.max_value is not None and new_value > self.max_value:
-            new_value = self.min_value if self.min_value is not None else self.min_value # Poprawiono błąd: powinno być min_value
+            new_value = self.min_value if self.min_value is not None else self.min_value 
         
-        # Tymczasowo usuń trace, aby to set() nie wywołało _variable_callback rekurencyjnie
-        # Ale to nie jest konieczne, bo _variable_callback już jest kontrolowane przez trace_add
-        # i nie prowadzi do rekurencji z self.variable.set() bezpośrednio.
-        # Wystarczy, że _variable_callback aktualizuje entry i wywołuje command.
-        # W tym kontekście, nie potrzebujemy tu trace_remove/add.
         self.variable.set(new_value) 
 
     def _add_button_callback(self):
@@ -92,7 +84,7 @@ class MySpinbox(ctk.CTkFrame):
         return self.variable.get()
 
     def set(self, value):
-        self._set_value_and_notify(int(value)) # Użyj _set_value_and_notify dla spójności
+        self._set_value_and_notify(int(value)) 
 
 
 class NotificationPopup(ctk.CTkToplevel):

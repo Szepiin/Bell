@@ -1,8 +1,6 @@
 import customtkinter as ctk
 from datetime import datetime
-import tkinter as tk
-from CTkSpinbox import * # Zakładam, że CTkSpinbox jest poprawnie zaimportowany i działa
-import clockHandling # Zakładam, że clockHandling jest poprawnie zaimportowany
+import clockHandling 
 import time
 import threading
 import logging
@@ -12,7 +10,6 @@ from myLibs import NotificationPopup, MyButton, MyLabel, MySpinbox, ScheduleButt
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Konfiguracja CTk (zachowane z oryginalnego pliku)
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
@@ -30,25 +27,23 @@ class BellApp(ctk.CTk):
 
         self.title("Dzwonek")
         self.geometry("800x480")
-        # Można odkomentować dla trybu pełnoekranowego:
         # self.attributes("-fullscreen", True)
         self.config(cursor="none")
 
-        self.frames = {} # Słownik przechowujący instancje ramek
-        self.current_frame_name = None # Nazwa aktualnie wyświetlanej ramki
+        self.frames = {} 
+        self.current_frame_name = None
 
         self.create_tab_buttons()
         self.create_frames()
-        self.show_frame("main") # Wyświetl ekran główny przy starcie
+        self.show_frame("main")
 
-        # Logika wygaszacza ekranu
         self.last_activity_time = time.time()
-        self.bind_all("<Button>", self._reset_inactivity_timer) # Śledzenie kliknięć myszy
-        self.bind_all("<Key>", self._reset_inactivity_timer)     # Śledzenie naciśnięć klawiszy
-        self.after(1000, self._check_inactivity) # Rozpocznij sprawdzanie bezczynności
+        self.bind_all("<Button>", self._reset_inactivity_timer)
+        self.bind_all("<Key>", self._reset_inactivity_timer)
+        self.after(1000, self._check_inactivity)
 
-        self.protocol("WM_DELETE_WINDOW", self._on_close) # Obsługa zamykania okna
-        self.after(1000, self._update_main_loop) # Rozpocznij główną pętlę aktualizacji
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.after(1000, self._update_main_loop)
 
     def create_tab_buttons(self):
         """Tworzy ramkę z przyciskami nawigacyjnymi (zakładkami)."""
@@ -68,6 +63,7 @@ class BellApp(ctk.CTk):
                 text=text,
                 height=80,
                 hover=False,
+                fg_color="#1f538d",
                 font=ctk.CTkFont(family="Calibri", size=24, weight="bold"),
                 command=lambda n=name: self.show_frame(n),
             ).pack(side="left", fill="both", expand=True, padx=3, pady=5)
@@ -80,6 +76,7 @@ class BellApp(ctk.CTk):
         self.frames["schedule"] = ScheduleTab(self, self.schedule)
         self.frames["clock"] = ClockTab(self)
         self.frames["screensaver"] = ScreensaverFrame(self)
+        self.frames["popup"] = PopupFrame(self)
 
         # Umieszczenie wszystkich ramek w tym samym miejscu, aby można było je przełączać
         for frame in self.frames.values():
@@ -265,7 +262,6 @@ class SoundSettings(ctk.CTkFrame):
         self.btnPlayBell = MyButton(
             self.left,
             text="", # Tekst zostanie ustawiony przez _update_button_texts
-            fg_color="#1f538d",
             command=self._toggle_bell_btn,
         )
         self.btnPlayBell.pack(pady=30)
@@ -274,7 +270,6 @@ class SoundSettings(ctk.CTkFrame):
         self.btnPlayPrebell = MyButton(
             self.left,
             text="", # Tekst zostanie ustawiony przez _update_button_texts
-            fg_color="#1f538d",
             command=self._toggle_prebell_btn,
         )
         self.btnPlayPrebell.pack(pady=30)
@@ -289,7 +284,7 @@ class SoundSettings(ctk.CTkFrame):
         self.btnStartAlarm.pack(pady=30)
        
         # Przycisk trybu weekendowego
-        self.btnToggleWeekend = MyButton(self.right, text="", command=self._toggle_weekend_btn, fg_color="")
+        self.btnToggleWeekend = MyButton(self.right, text="", command=self._toggle_weekend_btn)
         self._update_weekend_button_text() # Ustaw początkowy tekst i kolor
         self.btnToggleWeekend.pack(pady=30, fill="y")
 
@@ -306,8 +301,8 @@ class SoundSettings(ctk.CTkFrame):
             self.btnPlayPrebell.configure(state="disabled")
 
         else: # Nic nie gra
-            self.btnPlayBell.configure(text=f"Odtwórz / zatrzymaj\ndzwonek\n{self.master.music.musicFileNameBell}", state="normal", fg_color="#1f538d")
-            self.btnPlayPrebell.configure(text=f"Odtwórz / zatrzymaj\nprzeddzwonek\n{self.master.music.musicFileNamePrebell}", state="normal",fg_color="#1f538d")
+            self.btnPlayBell.configure(text=f"Odtwórz / zatrzymaj\ndzwonek:\n{self.master.music.musicFileNameBell}", state="normal")
+            self.btnPlayPrebell.configure(text=f"Odtwórz / zatrzymaj\nprzeddzwonek:\n{self.master.music.musicFileNamePrebell}", state="normal")
             self.btnStartAlarm.configure(text=f"Uruchom alarm:\n{self.master.music.musicFileNameAlarm}", state="normal",fg_color="#e00000")
 
 
@@ -560,6 +555,7 @@ class ScheduleTab(ctk.CTkFrame):
         self.main_content_frame.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
         self.main_content_frame.grid_columnconfigure(0, weight=1) # Kolumna dla BellFrame
         self.main_content_frame.grid_columnconfigure(1, weight=0) # Kolumna dla Utils (nie rozciągaj)
+        self.main_content_frame.grid_columnconfigure(2, weight=0) # Kolumna dla Utils (nie rozciągaj)
 
         self.container = ctk.CTkFrame(self.main_content_frame)
         self.container.grid(row=0, column=0, sticky="nsew", padx=5) # Rozciągnij w poziomie i pionie
@@ -572,15 +568,15 @@ class ScheduleTab(ctk.CTkFrame):
         ScheduleButton(self.utils, text="Zapisz zmiany", command=self._save_current_bell_to_file).pack(side="top", pady=5, padx=5)
 
         # Ramka nawigacji na dole, używając grid
-        self.nav_frame = ctk.CTkFrame(self)
-        self.nav_frame.grid(row=1, column=0, sticky="ns", pady=5, padx=2) # Rozciągnij w poziomie
+        self.nav_frame = ctk.CTkFrame(self.main_content_frame)
+        self.nav_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=5, padx=5) # Rozciągnij w poziomie
         
         # Konfiguracja kolumn w nav_frame
         self.nav_frame.grid_columnconfigure(0, weight=1) # Lewy przycisk, rozciągnij
         self.nav_frame.grid_columnconfigure(1, weight=1) # Prawy przycisk, rozciągnij
 
-        ScheduleButton(self.nav_frame, text="Poprzedni", command=self._show_prev_bell).grid(row=0, column=0, padx=5, pady=2, sticky="ew")
-        ScheduleButton(self.nav_frame, text="Następny", command=self._show_next_bell).grid(row=0, column=1, padx=5, pady=2, sticky="ew")
+        ScheduleButton(self.nav_frame, text="Poprzedni", command=self._show_prev_bell).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ScheduleButton(self.nav_frame, text="Następny", command=self._show_next_bell).grid(row=0, column=1, padx=5, pady=5, sticky="e")
 
         if not self.schedule.data["bellSchedule"]:
             self.schedule.addSchedule()
@@ -593,13 +589,6 @@ class ScheduleTab(ctk.CTkFrame):
             self._display_bell_at_index(0)
         else:
             self.show_message("Brak dzwonków do wyświetlenia, dodaj nowy.", "red")
-
-    # Ta funkcja staje się zbędna
-    # def _handle_bell_frame_data_change(self):
-    #     """Callback from BellFrame when its internal variables change."""
-    #     self._save_current_bell_to_file_async(show_message=False) 
-    #     self.master.frames["main"].update_display(self.schedule.nextOccurrence, self.schedule.getFormattedScheduleList())
-
 
     def _display_bell_at_index(self, index):
         """
@@ -741,25 +730,21 @@ class ClockTab(ctk.CTkFrame):
         entry_frame = ctk.CTkFrame(self.center_frame)
         entry_frame.pack(fill="x")
 
-        # Zmienne instancji dla spinboxów, inicjalizowane aktualnym czasem
         self.hour_entry_var = ctk.IntVar(value=datetime.now().hour)
         self.minute_entry_var = ctk.IntVar(value=datetime.now().minute)
 
-        self.hour_entry = CTkSpinbox(entry_frame, min_value=0, max_value=23, width=180, height=60, 
-                                     variable=self.hour_entry_var, start_value=datetime.now().hour, font=("size",24))
-        self.hour_entry.pack(side="left", padx=50)
+        self.hour_entry = MySpinbox(entry_frame, min_value=0, max_value=23, width=180, height=60, 
+                                     variable=self.hour_entry_var)
+        self.hour_entry.pack(side="left", padx=40)
 
-        self.minute_entry = CTkSpinbox(entry_frame, min_value=0, max_value=59, width=180, height=60, 
-                                       variable=self.minute_entry_var, start_value=datetime.now().minute, font=("size",24))
+        self.minute_entry = MySpinbox(entry_frame, min_value=0, max_value=59, width=180, height=60, 
+                                       variable=self.minute_entry_var)
         self.minute_entry.pack(side="left", padx=10)
 
         self.btn_save_clock = MyButton(entry_frame, text="Zapisz czas",                      
                       command=self._save_clock_time) 
         self.btn_save_clock.pack(pady=20, side="bottom")
         
-        # Etykieta do wyświetlania komunikatów o zapisie czasu
-        self.message_label = MyLabel(self.center_frame, text="", text_color="green")
-        self.message_label.pack(pady=5)
 
 
     def update_time(self):
@@ -775,12 +760,12 @@ class ClockTab(ctk.CTkFrame):
         minute = self.minute_entry_var.get()
         
         if clockHandling.set_system_time(hour=hour, minute=minute):
-            self.message_label.configure(text="Czas zapisany pomyślnie!", text_color="green")
+            #self.message_label.configure(text="Czas zapisany pomyślnie!", text_color="green")
             logger.info(f"Czas systemowy ustawiono na {hour:02d}:{minute:02d}.")
         else:
-            self.message_label.configure(text="Błąd zapisu czasu. Wymagane uprawnienia administratora.", text_color="red")
+            #self.message_label.configure(text="Błąd zapisu czasu. Wymagane uprawnienia administratora.", text_color="red")
             logger.error(f"Nie udało się ustawić czasu systemowego na {hour:02d}:{minute:02d}.")
-        self.after(3000, lambda: self.message_label.configure(text="")) # Usuń komunikat po 3 sekundach
+        #self.after(3000, lambda: self.message_label.configure(text=""))
 
 
 class ScreensaverFrame(ctk.CTkFrame):
@@ -820,3 +805,18 @@ class ScreensaverFrame(ctk.CTkFrame):
         now = datetime.now().strftime("%H:%M:%S")
         self.clock_label.configure(text=now)
         self.next_bell_label.configure(text= next_occurrence)
+        
+class PopupFrame(ctk.CTkFrame):
+    """
+    Ramka wygaszacza ekranu, wyświetlająca duży zegar i następny dzwonek.
+    """
+    def __init__(self, master):
+        super().__init__(master, fg_color="#292727") # Ciemne tło
+        
+        # Etykieta dużego zegara
+        self.clock_label = ctk.CTkLabel(
+            self, 
+            text=datetime.now().strftime("%H:%M:%S"), 
+            font=ctk.CTkFont("Helvetica", 150), 
+            text_color="white"
+        )
