@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import json
 import os
 import logging
+import constants
 
 # Konfiguracja logowania dla modułu schedule
 logger = logging.getLogger(__name__)
@@ -29,9 +30,9 @@ class scheduleHandling:
             "turnAmpOff": False
         }
         
-        self.__scheduleLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/schedule.json")
+        self.__scheduleLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/schedule.json") if not constants.SCHEDULE_PATH_LINUX else constants.SCHEDULE_PATH_LINUX
         self._loadScheduleFromJson()
-        self.checkSchedule() # Pierwsze sprawdzenie przy starcie aplikacji
+        self.checkSchedule()
 
     def _loadScheduleFromJson(self):
         """Ładuje harmonogram z pliku JSON."""

@@ -92,6 +92,7 @@ class NotificationPopup(ctk.CTkToplevel):
     Niestandardowe okno pop-up do wyświetlania krótkich komunikatów.
     Zamyka się automatycznie po określonym czasie lub po kliknięciu.
     """
+    _closed = False
     def __init__(self, master, message, duration_ms=2500, color="white"):
         super().__init__(master)
         self.master = master
@@ -101,9 +102,10 @@ class NotificationPopup(ctk.CTkToplevel):
         self.label = ctk.CTkLabel(self, text=message, font=("Calibri", 40, "bold"), text_color=color, anchor="center")
         self.label.pack(fill="both", expand=True, padx=20, pady=20)
         
-        self.grab_set() # Zablokuj interakcję z innymi oknami aplikacji, dopóki pop-up jest otwarty
+        #self.grab_set() # Zablokuj interakcję z innymi oknami aplikacji, dopóki pop-up jest otwarty
         self.bind("<Button-1>", self.close_popup) # Zamyka po kliknięciu
-
+        self.label.bind("<Button-1>", self.close_popup)
+        
         # Umieszczenie pop-upu dokładnie nad oknem głównym
         self.update_idletasks()
         master_x = self.master.winfo_rootx()
@@ -114,12 +116,13 @@ class NotificationPopup(ctk.CTkToplevel):
 
 
         self.attributes("-alpha", 0.95)
+        self._closed = False
         self.after(duration_ms, self.close_popup) # Ustaw timer na automatyczne zamknięcie
 
     def close_popup(self, event=None):
         """Zamyka okno pop-up."""
-        if self.winfo_exists(): # Sprawdź, czy okno jeszcze istnieje przed zniszczeniu
-            self.grab_release() # Zwolnij blokadę interakcji
+        if not self._closed and self.winfo_exists(): # Sprawdź, czy okno jeszcze istnieje przed zniszczeniu
+            self._closed = True
             self.destroy()
 
 

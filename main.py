@@ -17,8 +17,8 @@ def get_base_path():
     if platform.machine() == "AMD64":
         return USB_PATH_WINDOWS
     else:
-        # Można dodać bardziej zaawansowane wykrywanie ścieżki USB na Linuksie
         return USB_PATH_LINUX
+    
 
 if __name__ == "__main__":
     base_path = get_base_path()
