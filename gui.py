@@ -145,6 +145,8 @@ class BellApp(ctk.CTk):
             self.music._amp_relay(state=False)
             logger.info("Wyłączono wzmacniacz.")
 
+        self.frames["sounds"]._update_button_texts()
+        
         self.after(1000, self._update_main_loop) # Zaplanuj kolejne wywołanie po 1 sekundzie
 
     def _on_close(self):
@@ -617,7 +619,7 @@ class ScheduleTab(ctk.CTkFrame):
         if self.schedule.addSchedule(): 
             new_index = len(self.schedule.data["bellSchedule"]) - 1
             self._display_bell_at_index(new_index) 
-            self._save_current_bell_to_file_async() # Zapisz zmiany do pliku po dodaniu
+            #self._save_current_bell_to_file_async() # Zapisz zmiany do pliku po dodaniu
             self.master.frames["main"].update_display(self.schedule.nextOccurrence, self.schedule.getFormattedScheduleList())
             self.show_message(f"Dzwonek {new_index + 1} dodany pomyślnie!", "green")
             logger.info("Added new bell.")
@@ -644,7 +646,7 @@ class ScheduleTab(ctk.CTkFrame):
                 self._display_bell_at_index(self.current_index)
                 self.show_message(f"Dzwonek {deleted_index + 1} usunięty!", "orange")
 
-            self._save_current_bell_to_file_async() # Zapisz zmiany do pliku po usunięciu
+            #self._save_current_bell_to_file_async() # Zapisz zmiany do pliku po usunięciu
             self.master.frames["main"].update_display(self.schedule.nextOccurrence, self.schedule.getFormattedScheduleList())
             logger.info(f"Deleted bell at index: {deleted_index}.")
         else:
@@ -656,22 +658,18 @@ class ScheduleTab(ctk.CTkFrame):
         Zapisuje zmiany w aktualnie widocznej ramce dzwonka (które już są w self.schedule.data)
         do pliku JSON. Wywoływane przez przycisk "Zapisz zmiany".
         """
-        self._save_current_bell_to_file_async(show_message=True)
+        self._save_current_bell_to_file_async()
 
-    def _save_current_bell_to_file_async(self, show_message=True):
+    def _save_current_bell_to_file_async(self):
         """Uruchamia zapis zmian w osobnym wątku."""
         def save_in_thread():
             try:
                 self.schedule.saveScheduleToJson() # To jest faktyczny zapis do pliku
                 logger.info("Schedule saved to JSON.")
-                if show_message:
-                    self.after(0, lambda: self.show_message("Zmiany zapisane!", "green"))
+                self.after(0, lambda: self.show_message("Zmiany zapisane!", "green"))
             except Exception as e:
                 logger.error(f"Error saving schedule to file: {e}")
                 self.after(0, lambda: self.show_message(f"Błąd zapisu: {e}", "red"))
-
-        if show_message:
-            self.show_message("Zapisywanie...", color="white")
         threading.Thread(target=save_in_thread, daemon=True).start()
 
     def _show_next_bell(self):

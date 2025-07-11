@@ -99,6 +99,14 @@ class NotificationPopup(ctk.CTkToplevel):
         self.overrideredirect(True)  # Usuwa ramkę okna i przyciski systemowe
         self.attributes("-topmost", True)  # Zawsze na wierzchu innych okien aplikacji
 
+        self.config(cursor="none")
+        self.update_idletasks()
+        master_x = self.master.winfo_rootx()
+        master_y = self.master.winfo_rooty()
+        master_w = self.master.winfo_screenwidth()
+        master_h = self.master.winfo_screenheight()
+        self.geometry(f"{master_w}x{master_h}+{master_x}+{master_y}")
+        
         self.label = ctk.CTkLabel(self, text=message, font=("Calibri", 40, "bold"), text_color=color, anchor="center")
         self.label.pack(fill="both", expand=True, padx=20, pady=20)
         
@@ -106,13 +114,7 @@ class NotificationPopup(ctk.CTkToplevel):
         self.bind("<Button-1>", self.close_popup) # Zamyka po kliknięciu
         self.label.bind("<Button-1>", self.close_popup)
         
-        # Umieszczenie pop-upu dokładnie nad oknem głównym
-        self.update_idletasks()
-        master_x = self.master.winfo_rootx()
-        master_y = self.master.winfo_rooty()
-        master_w = self.master.winfo_screenwidth()
-        master_h = self.master.winfo_screenheight()
-        self.geometry(f"{master_w}x{master_h}+{master_x}+{master_y}")
+
 
 
         self.attributes("-alpha", 0.95)

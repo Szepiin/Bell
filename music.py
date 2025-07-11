@@ -30,19 +30,27 @@ class musicHandling: #TODO automatyczne wykrywanie dysku USB
             logger.error(f"Ścieżka do plików dźwiękowych nie istnieje: {self.soundFilesPath}. Używam katalogu skryptu.")
             self.soundFilesPath = os.path.dirname(os.path.abspath(__file__)) 
 
-        self._musicFileBell = self._find_mp3_file("1")
-        self._musicFilePrebell = self._find_mp3_file("2")
-        self._musicFileAlarm = self._find_mp3_file("0")
 
-        # Upewnij się, że nazwy plików są poprawne, nawet jeśli plik nie został znaleziony
-        self.musicFileNameBell = os.path.basename(self._musicFileBell) if self._musicFileBell else "Brak pliku"
-        self.musicFileNamePrebell = os.path.basename(self._musicFilePrebell) if self._musicFilePrebell else "Brak pliku"
-        self.musicFileNameAlarm = os.path.basename(self._musicFileAlarm) if self._musicFileAlarm else "Brak pliku"
-        
         self._play_lock = threading.Lock() 
         self._is_alarm_playing = False 
         self._is_bell_playing = False
         self._is_prebell_playing = False
+        threading.Thread(target=self._update_audio_loop, daemon=True).start()
+
+    def _update_audio_loop(self):
+        """
+        Pętla do aktualizacji plików dźwiękowych
+        """
+        while True:
+            self._musicFileBell = self._find_mp3_file("1")
+            self._musicFilePrebell = self._find_mp3_file("2")
+            self._musicFileAlarm = self._find_mp3_file("0")
+
+            # Upewnij się, że nazwy plików są poprawne, nawet jeśli plik nie został znaleziony
+            self.musicFileNameBell = os.path.basename(self._musicFileBell) if self._musicFileBell else "Brak pliku"
+            self.musicFileNamePrebell = os.path.basename(self._musicFilePrebell) if self._musicFilePrebell else "Brak pliku"
+            self.musicFileNameAlarm = os.path.basename(self._musicFileAlarm) if self._musicFileAlarm else "Brak pliku"
+            time.sleep(5)
 
     def _find_mp3_file(self, start_letter):
         """
