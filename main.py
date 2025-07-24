@@ -12,6 +12,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Ustawienie zmiennej DISPLAY (może wymagać dostosowania do środowiska)
 os.environ['DISPLAY'] = ':0'
 
+def quit_plymouth():
+    os.system("sudo plymouth quit")
+
+
 def get_base_path():
     """Zwraca ścieżkę bazową dla plików w zależności od systemu operacyjnego."""
     if platform.machine() == "AMD64":
@@ -22,10 +26,12 @@ def get_base_path():
 
 if __name__ == "__main__":
     base_path = get_base_path()
-    sound_files_path = os.path.join(base_path, "Files") # Zakładamy podkatalog Files dla dźwięków
 
     schedule = scheduleHandling()
-    music = musicHandling(sound_files_path, AMP_OUTPUT_PIN_GPIO)
+    music = musicHandling(base_path, AMP_OUTPUT_PIN_GPIO)
     
     appGui = BellApp(music=music, schedule=schedule, screensaver_time=SCREEN_SAVER_TIME_SECONDS)
+
     appGui.mainloop()
+    appGui.after(2000, quit_plymouth)
+    

@@ -254,11 +254,16 @@ class SoundSettings(ctk.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.left = ctk.CTkFrame(self)
+
+        self.top = ctk.CTkFrame(self)
+        self.top.pack(fill="x")
+        
+        self.left = ctk.CTkFrame(self.top)
         self.left.pack(side="left", fill="both", expand=True)
 
-        self.right = ctk.CTkFrame(self)
+        self.right = ctk.CTkFrame(self.top)
         self.right.pack(side="right", fill="both", expand=True)
+
 
         # Przycisk odtwarzania/zatrzymywania dzwonka
         self.btnPlayBell = MyButton(
@@ -291,7 +296,10 @@ class SoundSettings(ctk.CTkFrame):
         self.btnToggleWeekend.pack(pady=30, fill="y")
 
         self._update_button_texts() # Upewnij się, że tekst przycisków jest aktualny przy inicjalizacji
-
+        
+        self.lbInfo = MyLabel(self, text="Autor: Grzegorz Serwin | Wersja programu: 1.0.0", font=ctk.CTkFont(family="Calibri", size=12, weight="bold"))
+        self.lbInfo.pack(pady=10)
+        
     def _update_button_texts(self):
         """
         Aktualizuje teksty i kolory przycisków odtwarzania dźwięków
@@ -487,11 +495,11 @@ class ScheduleTab(ctk.CTkFrame):
             self.grid_rowconfigure(3, weight=0, minsize=22)
 
             self.label_frame = ctk.CTkFrame(self)
-            self.label_frame.grid(row=0, column=0, columnspan=3, rowspan=1, sticky="ew", pady=(1, 2))
+            self.label_frame.grid(row=0, column=0, columnspan=3, rowspan=1, sticky="ew", pady=(5, 1))
             self.label_frame.grid_columnconfigure(0, weight=1)
             self.bell_label = ctk.CTkLabel(self.label_frame, text="Dzwonek X z Y",
                                              font=ctk.CTkFont(family="Calibri", size=24, weight="bold"))
-            self.bell_label.grid(pady=(0, 5))
+            self.bell_label.grid(pady=(5, 5))
 
             ctk.CTkCheckBox(
                 self,
@@ -624,7 +632,7 @@ class ScheduleTab(ctk.CTkFrame):
             self.show_message(f"Dzwonek {new_index + 1} dodany pomyślnie!", "green")
             logger.info("Added new bell.")
         else:
-            self.show_message("Nie można dodać więcej dzwonków (maks. 24)!", "red")
+            self.show_message("Nie można dodać \n więcej dzwonków!", "red")
             logger.warning("Attempted to add bell, but reached maximum.")
 
 

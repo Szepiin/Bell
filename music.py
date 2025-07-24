@@ -14,7 +14,7 @@ else:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class musicHandling: #TODO automatyczne wykrywanie dysku USB
+class musicHandling: 
     """
     Klasa odpowiedzialna za odtwarzanie dźwięków dzwonków, przeddzwonków i alarmów,
     oraz sterowanie przekaźnikiem wzmacniacza.
@@ -23,14 +23,8 @@ class musicHandling: #TODO automatyczne wykrywanie dysku USB
         pygame.mixer.init()
         self.AMP_OUTPUT_PIN = AMP_OUTPUT_PIN
         self.soundFilesPath = filesPath
-        self._sampleSoundLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/sampleSound.mp3")
+        self._sampleSoundLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/DomyslnyDzwiek.mp3")
         
-        # Sprawdź, czy ścieżka do plików dźwiękowych istnieje
-        if not os.path.exists(self.soundFilesPath):
-            logger.error(f"Ścieżka do plików dźwiękowych nie istnieje: {self.soundFilesPath}. Używam katalogu skryptu.")
-            self.soundFilesPath = os.path.dirname(os.path.abspath(__file__)) 
-
-
         self._play_lock = threading.Lock() 
         self._is_alarm_playing = False 
         self._is_bell_playing = False
@@ -64,7 +58,7 @@ class musicHandling: #TODO automatyczne wykrywanie dysku USB
                     if os.path.exists(file_path):
                         logger.info(f"Znaleziono plik dla '{start_letter}': {file_path}")
                         return file_path
-        logger.warning(f"Nie znaleziono pliku MP3 zaczynającego się na '{start_letter}'. Użycie domyślnego: {self._sampleSoundLocation}")
+        logger.warning(f"Nie znaleziono pliku MP3 zaczynającego się na '{start_letter}' w lokalizacji {self.soundFilesPath}. Użycie domyślnego: {self._sampleSoundLocation}")
         if os.path.exists(self._sampleSoundLocation):
             return self._sampleSoundLocation
         else:

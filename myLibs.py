@@ -95,11 +95,10 @@ class NotificationPopup(ctk.CTkToplevel):
     _closed = False
     def __init__(self, master, message, duration_ms=2500, color="white"):
         super().__init__(master)
+        self.config(cursor="none")
         self.master = master
         self.overrideredirect(True)  # Usuwa ramkę okna i przyciski systemowe
         self.attributes("-topmost", True)  # Zawsze na wierzchu innych okien aplikacji
-
-        self.config(cursor="none")
         self.update_idletasks()
         master_x = self.master.winfo_rootx()
         master_y = self.master.winfo_rooty()
