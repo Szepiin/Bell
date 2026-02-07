@@ -4,6 +4,7 @@ import clockHandling
 import time
 import threading
 import logging
+import auth
 from myLibs import NotificationPopup, MyButton, MyLabel, MySpinbox, ScheduleButton
 
 
@@ -19,11 +20,12 @@ class BellApp(ctk.CTk):
     Główna klasa aplikacji dzwonkowej.
     Zarządza ramkami, nawigacją, zegarem systemowym i logiką wygaszacza ekranu.
     """
-    def __init__(self, music, schedule, screensaver_time):
+    def __init__(self, music, schedule, screensaver_time, auth_handler):
         super().__init__()
         self.music = music
         self.schedule = schedule
         self.screensaver_time = screensaver_time 
+        self.auth = auth_handler
 
         self.title("Dzwonek")
         self.geometry("800x480")
@@ -35,8 +37,10 @@ class BellApp(ctk.CTk):
 
         self.create_tab_buttons()
         self.create_frames()
-        self.show_frame("main")
+        #self.show_frame("main")
 
+        self.show_frame("login")
+        
         self.last_activity_time = time.time()
         self.bind_all("<Button>", self._reset_inactivity_timer)
         self.bind_all("<Key>", self._reset_inactivity_timer)
@@ -55,6 +59,7 @@ class BellApp(ctk.CTk):
             ("Ustawienia", "sounds"),
             ("Dzwonki", "schedule"),
             ("Zegar", "clock"),
+            ("Hasło", "security"),
         ]
 
         for text, name in buttons:
@@ -71,20 +76,27 @@ class BellApp(ctk.CTk):
 
     def create_frames(self):
         """Tworzy instancje wszystkich ramek aplikacji."""
+        self.frames["login"] = LoginScreen(self, self.auth)
         self.frames["main"] = MainScreen(self)
         self.frames["sounds"] = SoundSettings(self)
         self.frames["schedule"] = ScheduleTab(self, self.schedule)
         self.frames["clock"] = ClockTab(self)
+        self.frames["security"] = SecurityTab(self, self.auth)
         self.frames["screensaver"] = ScreensaverFrame(self)
         self.frames["popup"] = PopupFrame(self)
 
         # Umieszczenie wszystkich ramek w tym samym miejscu, aby można było je przełączać
         for frame in self.frames.values():
-            if frame != self.frames["screensaver"]: 
+            if frame != self.frames["screensaver"] and frame != self.frames["login"]: 
                 frame.place(x=0, y=90, relwidth=1, relheight=1) # Ramki pod paskiem przycisków
             else:
                 frame.place(x=0, y=0, relwidth=1, relheight=1) # Wygaszacz ekranu zajmuje cały ekran
-
+    
+    def unlock_application(self):
+        """Wywoływane po poprawnym wpisaniu PINu."""
+        logger.info("Zalogowano pomyślnie.")
+        self.show_frame("main")
+    
     def show_frame(self, name):
         """
         Pokazuje wybraną ramkę i ukrywa pozostałe.
@@ -97,7 +109,7 @@ class BellApp(ctk.CTk):
         for frame_name, frame_obj in self.frames.items():
             if frame_name == name:
                 frame_obj.lift() # Podnieś wybraną ramkę na wierzch
-                if frame_name != "screensaver":
+                if frame_name != "login" and frame_name != "screensaver":
                     self.tab_buttons_frame.pack(side="top", fill="x") # Pokaż przyciski nawigacyjne
                 else:
                     self.tab_buttons_frame.pack_forget() # Ukryj przyciski dla wygaszacza ekranu
@@ -112,7 +124,19 @@ class BellApp(ctk.CTk):
         if name == "clock":
             self.frames["clock"].update_time()
 
-
+    def _reset_inactivity_timer(self, event=None):
+        self.last_activity_time = time.time()
+        # Jeśli jesteśmy na screensaverze, wróć do logowania (bezpieczniej) lub do main
+        # Tutaj decyzja projektowa: Czy po wygaszaczu trzeba znowu podać hasło?
+        # Zazwyczaj w takich systemach nie, chyba że to ścisła kontrola.
+        # Przywracam poprzedni widok.
+        
+        if self.current_frame_name == "screensaver":
+            # Jeśli wylogowanie po czasie jest wymagane, zmień na: self.show_frame("login")
+            # Jeśli nie, wracamy do głównego (ale zakładając, że user był zalogowany)
+            # Najbezpieczniej: wróć do logowania.
+            self.show_frame("login") 
+            logger.info("Wyjście z wygaszacza -> powrót do logowania.")
     def _update_main_loop(self):
         """
         Główna pętla aktualizująca stan aplikacji co sekundę.
@@ -160,7 +184,7 @@ class BellApp(ctk.CTk):
         """Resetuje licznik bezczynności i wychodzi z wygaszacza ekranu, jeśli jest aktywny."""
         self.last_activity_time = time.time()
         if self.current_frame_name == "screensaver":
-            self.show_frame("main")
+            self.show_frame("login")
             logger.info("Wykryto aktywność, powrót z wygaszacza ekranu.")
 
     def _check_inactivity(self):
@@ -826,3 +850,202 @@ class PopupFrame(ctk.CTkFrame):
             font=ctk.CTkFont("Helvetica", 150), 
             text_color="white"
         )
+
+
+class LoginScreen(ctk.CTkFrame):
+    """
+    Ekran logowania wyświetlany przy starcie aplikacji.
+    Układ: Lewa strona - Pole PIN, Prawa strona - Klawiatura.
+    """
+    def __init__(self, master, auth_handler):
+        super().__init__(master)
+        self.master = master
+        self.auth = auth_handler
+        
+        self.pack_propagate(False)
+        
+        # Główny kontener wyśrodkowany na ekranie
+        self.center_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.center_frame.place(relx=0.5, rely=0.5, anchor="center")
+
+        # --- LEWA STRONA (Input) ---
+        self.input_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
+        self.input_frame.grid(row=0, column=0, padx=40, pady=20, sticky="n")
+
+        self.label = ctk.CTkLabel(self.input_frame, text="Podaj kod PIN", font=("Calibri", 30, "bold"))
+        self.label.pack(pady=(0, 20))
+
+        self.pin_var = ctk.StringVar()
+        self.entry = ctk.CTkEntry(self.input_frame, textvariable=self.pin_var, show="*", 
+                                  font=("Calibri", 50), width=250, height=60, justify="center")
+        self.entry.pack(pady=10)
+
+        # --- PRAWA STRONA (Klawiatura) ---
+        self.keypad_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
+        self.keypad_frame.grid(row=0, column=1, padx=40, pady=20)
+
+        keys = [
+            ('1', 0, 0), ('2', 0, 1), ('3', 0, 2),
+            ('4', 1, 0), ('5', 1, 1), ('6', 1, 2),
+            ('7', 2, 0), ('8', 2, 1), ('9', 2, 2),
+            ('⌫', 3, 0), ('0', 3, 1), ('OK', 3, 2),
+        ]
+
+        for key, row, col in keys:
+            if key == 'OK':
+                color = "green"
+                cmd = self._check_login
+            elif key == '⌫':
+                color = "#a83232" # czerwony
+                cmd = self._clear_entry
+            else:
+                color = None # domyślny
+                cmd = lambda k=key: self._add_digit(k)
+
+            # Powiększyłem przyciski dla wygody dotykowej
+            btn = ctk.CTkButton(self.keypad_frame, text=key, width=80, height=80, 
+                                font=("Calibri", 32, "bold"), command=cmd)
+            if color:
+                btn.configure(fg_color=color)
+            btn.grid(row=row, column=col, padx=4, pady=4)
+
+    def _add_digit(self, digit):
+        if len(self.pin_var.get()) < 6: # Limit długości pinu
+            self.pin_var.set(self.pin_var.get() + digit)
+
+    def _clear_entry(self):
+        self.pin_var.set("")
+
+    def _check_login(self):
+        pin = self.pin_var.get()
+        if self.auth.check_pin(pin):
+            self.entry.configure(border_color="green")
+            self.master.unlock_application()
+            self._clear_entry()
+        else:
+            self.entry.configure(border_color="red")
+            # Używamy NotificationPopup bezpośrednio, bo frames["popup"] może nie być zainicjowane
+            NotificationPopup(self.master, "Błędny PIN!", color="red") 
+            self.pin_var.set("")
+
+
+class SecurityTab(ctk.CTkFrame):
+    """
+    Zakładka do zmiany hasła.
+    Układ: Lewa strona - Pola edycji, Prawa strona - Klawiatura.
+    Obsługuje przełączanie aktywnego pola dotykiem.
+    """
+    def __init__(self, master, auth_handler):
+        super().__init__(master)
+        self.auth = auth_handler
+        
+        # Główny kontener wyśrodkowany
+        self.center_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.center_frame.place(relx=0.5, rely=0.4, anchor="center")
+
+        # --- LEWA STRONA (Pola wprowadzania) ---
+        self.input_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
+        self.input_frame.grid(row=0, column=0, padx=40, pady=20, sticky="n")
+
+        MyLabel(self.input_frame, text="Ustaw nowy PIN:").pack(pady=(30, 0))
+
+        # Zmienne przechowujące wartości
+        self.new_pin_var = ctk.StringVar()
+        self.confirm_pin_var = ctk.StringVar()
+        
+        # Zmienna wskazująca, które pole jest aktualnie edytowane (domyślnie pierwsze)
+        self.active_var = self.new_pin_var 
+
+        # Pole 1: Nowy PIN
+        self.entry_new = ctk.CTkEntry(self.input_frame, textvariable=self.new_pin_var, placeholder_text="Nowy PIN", 
+                                      show="*", font=("Calibri", 24), width=300, height=50, justify="center")
+        self.entry_new.pack(pady=15)
+        # Bind events: Kliknięcie w pole ustawia je jako aktywne
+        self.entry_new.bind("<Button-1>", lambda event: self._set_active_field(self.new_pin_var, self.entry_new))
+        self.entry_new.bind("<FocusIn>", lambda event: self._set_active_field(self.new_pin_var, self.entry_new))
+        MyLabel(self.input_frame, text="Powtórz nowy PIN:").pack(pady=(20, 0))
+        # Pole 2: Potwierdź PIN
+        self.entry_confirm = ctk.CTkEntry(self.input_frame, textvariable=self.confirm_pin_var, placeholder_text="Potwierdź PIN", 
+                                          show="*", font=("Calibri", 24), width=300, height=50, justify="center")
+        self.entry_confirm.pack(pady=15)
+        self.entry_confirm.bind("<Button-1>", lambda event: self._set_active_field(self.confirm_pin_var, self.entry_confirm))
+        self.entry_confirm.bind("<FocusIn>", lambda event: self._set_active_field(self.confirm_pin_var, self.entry_confirm))
+
+        # Przycisk Zapisu
+        MyButton(self.input_frame, text="Zapisz zmiany", command=self._save_new_pin, width=300, height=80).pack(pady=30)
+
+
+        # --- PRAWA STRONA (Klawiatura) ---
+        self.keypad_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
+        self.keypad_frame.grid(row=0, column=1, padx=40)
+
+        keys = [
+            ('1', 0, 0), ('2', 0, 1), ('3', 0, 2),
+            ('4', 1, 0), ('5', 1, 1), ('6', 1, 2),
+            ('7', 2, 0), ('8', 2, 1), ('9', 2, 2),
+            ('⌫', 3, 0), ('0', 3, 1), # Zmiana: DEL (backspace) i CLR (czyść wszystko)
+        ]
+
+        for key, row, col in keys:
+            cmd = None
+            color = None
+            if key == '⌫':
+                color = "#d97b23" # pomarańczowy dla backspace
+                cmd = self._backspace
+            else:
+                cmd = lambda k=key: self._add_digit(k)
+
+            btn = ctk.CTkButton(self.keypad_frame, text=key, width=80, height=80, 
+                                font=("Calibri", 32, "bold"), command=cmd)
+            if color:
+                btn.configure(fg_color=color)
+            btn.grid(row=row, column=col, padx=4, pady=4)
+
+        # Ustawienie wizualne aktywnego pola na starcie
+        self._set_active_field(self.new_pin_var, self.entry_new)
+
+    def _set_active_field(self, variable, widget):
+        """Ustawia aktywne pole do edycji i podświetla je."""
+        self.active_var = variable
+        
+        # Reset kolorów ramek
+        self.entry_new.configure(border_color=["#979da2", "#565b5e"]) # Domyślne kolory ctk
+        self.entry_confirm.configure(border_color=["#979da2", "#565b5e"])
+        
+        # Podświetl aktywne pole
+        widget.configure(border_color="#1f538d") # Kolor akcentu (niebieski)
+
+    def _add_digit(self, digit):
+        """Dodaje cyfrę do aktualnie aktywnego pola."""
+        if len(self.active_var.get()) < 8:
+            self.active_var.set(self.active_var.get() + digit)
+
+    def _backspace(self):
+        """Usuwa ostatni znak z aktywnego pola."""
+        current_text = self.active_var.get()
+        if len(current_text) > 0:
+            self.active_var.set(current_text[:-1])
+
+    def _save_new_pin(self):
+        p1 = self.new_pin_var.get()
+        p2 = self.confirm_pin_var.get()
+
+        if not p1 or not p2:
+             NotificationPopup(self.master, "Pola nie mogą być puste", color="orange")
+             return
+
+        if len(p1) < 4:
+             NotificationPopup(self.master, "Podany PIN jest za krótki - minimum 4 cyfry)", color="orange")
+             return
+
+        if p1 == p2:
+            if self.auth.set_user_pin(p1):
+                NotificationPopup(self.master, "Hasło zmienione!", color="green")
+                self.new_pin_var.set("")
+                self.confirm_pin_var.set("")
+                # Reset focusu na pierwsze pole
+                self._set_active_field(self.new_pin_var, self.entry_new)
+            else:
+                NotificationPopup(self.master, "Błąd zapisu.", color="red")
+        else:
+            NotificationPopup(self.master, "Hasła nie są identyczne", color="red")

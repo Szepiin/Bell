@@ -116,7 +116,7 @@ class musicHandling:
                     logger.info("Zatrzymano poprzednie odtwarzanie muzyki.")
 
                 self._amp_relay(state=True)
-                time.sleep(0.5) # Krótka pauza na włączenie wzmacniacza
+                time.sleep(1) # Krótka pauza na włączenie wzmacniacza
 
                 pygame.mixer.music.load(file_path)
                 if is_alarm:
@@ -141,7 +141,7 @@ class musicHandling:
             try:
                 # Odtwarzanie w nowym wątku nie blokuje UI, ale sam wątek będzie czekał
                 while pygame.mixer.music.get_busy():
-                    time.sleep(0.1)
+                    time.sleep(3)
                 
                 logger.info(f"Zakończono odtwarzanie: {file_path}")
             except Exception as e:
