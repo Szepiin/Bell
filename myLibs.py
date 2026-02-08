@@ -131,7 +131,7 @@ class MyButton(ctk.CTkButton):
     """Niestandardowy przycisk z predefiniowanymi stylami."""
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("hover", False)
-        kwargs.setdefault("width", 250)
+        kwargs.setdefault("width", 280)
         kwargs.setdefault("height", 90)
         kwargs.setdefault("font", ctk.CTkFont(family="Calibri", size=22, weight="bold"))
         super().__init__(*args, **kwargs)

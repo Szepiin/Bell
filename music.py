@@ -20,7 +20,15 @@ class musicHandling:
     oraz sterowanie przekaźnikiem wzmacniacza.
     """
     def __init__(self, filesPath, AMP_OUTPUT_PIN):
-        pygame.mixer.init()
+        try:
+            # Próba normalnego uruchomienia dźwięku
+            pygame.mixer.init()
+            logger.info("Zainicjalizowano system audio.")
+        except pygame.error:
+            # Jeśli się nie uda (brak karty), uruchom w trybie "dummy" (cisza, ale bez błędu)
+            logger.warning("Brak urządzenia audio! Uruchamianie w trybie 'dummy' (bez dźwięku).")
+            os.environ["SDL_AUDIODRIVER"] = "dummy"
+            pygame.mixer.init()
         self.AMP_OUTPUT_PIN = AMP_OUTPUT_PIN
         self.soundFilesPath = filesPath
         self._sampleSoundLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/DomyslnyDzwiek.mp3")

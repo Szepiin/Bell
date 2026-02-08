@@ -5,11 +5,11 @@ from music import musicHandling
 from gui import BellApp
 from logging.handlers import RotatingFileHandler
 from auth import AuthHandler
-from constants import AMP_OUTPUT_PIN_GPIO, USB_PATH_LINUX, USB_PATH_WINDOWS, SCREEN_SAVER_TIME_SECONDS
+from constants import AMP_OUTPUT_PIN_GPIO, USB_PATH_LINUX, USB_PATH_WINDOWS, SCREEN_SAVER_TIME_SECONDS, LOGS_PATH_LINUX
 import logging
 
 
-log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), LOGS_PATH_LINUX)
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 

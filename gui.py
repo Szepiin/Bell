@@ -29,7 +29,7 @@ class BellApp(ctk.CTk):
 
         self.title("Dzwonek")
         self.geometry("800x480")
-        # self.attributes("-fullscreen", True)
+        self.attributes("-fullscreen", True)
         self.config(cursor="none")
 
         self.frames = {} 
@@ -37,7 +37,6 @@ class BellApp(ctk.CTk):
 
         self.create_tab_buttons()
         self.create_frames()
-        #self.show_frame("main")
 
         self.show_frame("login")
         
@@ -52,14 +51,14 @@ class BellApp(ctk.CTk):
     def create_tab_buttons(self):
         """Tworzy ramkę z przyciskami nawigacyjnymi (zakładkami)."""
         self.tab_buttons_frame = ctk.CTkFrame(self)
-        self.tab_buttons_frame.pack(side="top", fill="x")
+        #self.tab_buttons_frame.pack(side="top", fill="x")
 
         buttons = [
             ("Harmonogram", "main"),
-            ("Ustawienia", "sounds"),
             ("Dzwonki", "schedule"),
-            ("Zegar", "clock"),
-            ("Hasło", "security"),
+            ("Ustawienia", "sounds"),
+            #("Zegar", "clock"),
+            #("Hasło", "security"),
         ]
 
         for text, name in buttons:
@@ -295,7 +294,7 @@ class SoundSettings(ctk.CTkFrame):
             text="", # Tekst zostanie ustawiony przez _update_button_texts
             command=self._toggle_bell_btn,
         )
-        self.btnPlayBell.pack(pady=30)
+        self.btnPlayBell.pack(pady=10)
 
         # Przycisk odtwarzania/zatrzymywania przeddzwonka
         self.btnPlayPrebell = MyButton(
@@ -303,22 +302,34 @@ class SoundSettings(ctk.CTkFrame):
             text="", # Tekst zostanie ustawiony przez _update_button_texts
             command=self._toggle_prebell_btn,
         )
-        self.btnPlayPrebell.pack(pady=30)
+        self.btnPlayPrebell.pack(pady=10)
 
         # Przycisk uruchamiania/zatrzymywania alarmu
         self.btnStartAlarm = MyButton(
-            self.right,
+            self.left,
             text="", # Tekst zostanie ustawiony przez _update_button_texts
             fg_color="#e00000",           
             command=self._toggle_alarm_btn,
         )
-        self.btnStartAlarm.pack(pady=30)
+        self.btnStartAlarm.pack(pady=10)
        
         # Przycisk trybu weekendowego
         self.btnToggleWeekend = MyButton(self.right, text="", command=self._toggle_weekend_btn)
         self._update_weekend_button_text() # Ustaw początkowy tekst i kolor
-        self.btnToggleWeekend.pack(pady=30, fill="y")
+        self.btnToggleWeekend.pack(pady=10, fill="y")
+        
+        # Przycisk przenoszący do Zegara
+        self.btnOpenClock = MyButton(self.right,
+                                     text="Ustawienia zegara", 
+                                     command=lambda: self.master.show_frame("clock"))
+        self.btnOpenClock.pack(pady=10, fill="y")
 
+        # Przycisk przenoszący do Hasła
+        self.btnOpenSecurity = MyButton(self.right,
+                                        text="Zmiana hasła",
+                                        command=lambda: self.master.show_frame("security"))
+        self.btnOpenSecurity.pack(pady=10, fill="y")
+                        
         self._update_button_texts() # Upewnij się, że tekst przycisków jest aktualny przy inicjalizacji
         
         self.lbInfo = MyLabel(self, text="Autor: Grzegorz Serwin | Wersja programu: 1.0.0", font=ctk.CTkFont(family="Calibri", size=12, weight="bold"))
@@ -903,7 +914,7 @@ class LoginScreen(ctk.CTkFrame):
                 cmd = lambda k=key: self._add_digit(k)
 
             # Powiększyłem przyciski dla wygody dotykowej
-            btn = ctk.CTkButton(self.keypad_frame, text=key, width=80, height=80, 
+            btn = ctk.CTkButton(self.keypad_frame, text=key, width=80, height=80, hover=False,
                                 font=("Calibri", 32, "bold"), command=cmd)
             if color:
                 btn.configure(fg_color=color)
@@ -957,7 +968,7 @@ class SecurityTab(ctk.CTkFrame):
         self.active_var = self.new_pin_var 
 
         # Pole 1: Nowy PIN
-        self.entry_new = ctk.CTkEntry(self.input_frame, textvariable=self.new_pin_var, placeholder_text="Nowy PIN", 
+        self.entry_new = ctk.CTkEntry(self.input_frame, textvariable=self.new_pin_var, placeholder_text="Nowy PIN",
                                       show="*", font=("Calibri", 24), width=300, height=50, justify="center")
         self.entry_new.pack(pady=15)
         # Bind events: Kliknięcie w pole ustawia je jako aktywne
@@ -965,7 +976,7 @@ class SecurityTab(ctk.CTkFrame):
         self.entry_new.bind("<FocusIn>", lambda event: self._set_active_field(self.new_pin_var, self.entry_new))
         MyLabel(self.input_frame, text="Powtórz nowy PIN:").pack(pady=(20, 0))
         # Pole 2: Potwierdź PIN
-        self.entry_confirm = ctk.CTkEntry(self.input_frame, textvariable=self.confirm_pin_var, placeholder_text="Potwierdź PIN", 
+        self.entry_confirm = ctk.CTkEntry(self.input_frame, textvariable=self.confirm_pin_var, placeholder_text="Potwierdź PIN",
                                           show="*", font=("Calibri", 24), width=300, height=50, justify="center")
         self.entry_confirm.pack(pady=15)
         self.entry_confirm.bind("<Button-1>", lambda event: self._set_active_field(self.confirm_pin_var, self.entry_confirm))
@@ -995,7 +1006,7 @@ class SecurityTab(ctk.CTkFrame):
             else:
                 cmd = lambda k=key: self._add_digit(k)
 
-            btn = ctk.CTkButton(self.keypad_frame, text=key, width=80, height=80, 
+            btn = ctk.CTkButton(self.keypad_frame, text=key, width=80, height=80, hover=False,
                                 font=("Calibri", 32, "bold"), command=cmd)
             if color:
                 btn.configure(fg_color=color)
