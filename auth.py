@@ -4,13 +4,15 @@ import json
 import os
 import logging
 
+from constants import AUTH_PATH_LINUX
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class AuthHandler:
     def __init__(self):
         self.DEFAULT_PIN_HASH = "bf7b7fa5bc0225c07be0e76ff88b0c690a17cad85535d7613d7813de2c88dcee"
-        self.auth_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/auth.json")
+        self.auth_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), AUTH_PATH_LINUX)
         self.user_pin_hash = None
         self._load_user_pin()
 

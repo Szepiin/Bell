@@ -90,10 +90,13 @@ class scheduleHandling:
         found_next_occurrence = False
         self.nextOccurrence = "Brak dzwonków" # Domyślna wartość, jeśli nie ma aktywnych
 
-        for bell_time, prebell_interval in active_bells:
+        for bell_time, prebell_interval in active_bells:               
             prebell_time = bell_time - timedelta(minutes=prebell_interval)
-            turn_amp_on_time = prebell_time - timedelta(seconds=10) # 10 sekund przed przeddzwonkiem
-            turn_amp_off_time = bell_time + timedelta(seconds=2) # 2 sekundy po dzwonku (na zakończenie dźwięku)
+            if prebell_interval == 0:
+                turn_amp_on_time = bell_time - timedelta(seconds=10) # 10 sekund przed dzwonkiem
+            else:
+                turn_amp_on_time = prebell_time - timedelta(seconds=10) # 10 sekund przed przeddzwonkiem
+            turn_amp_off_time = bell_time + timedelta(seconds=20) # 10 sekundy po dzwonku (na zakończenie dźwięku)
 
             # Sprawdź, czy aktualny czas jest w przedziale aktywacji dla każdej akcji
             # Używamy małego okna czasowego (np. 1 sekunda), aby akcja wyzwoliła się tylko raz
@@ -101,22 +104,23 @@ class scheduleHandling:
             # Włączenie wzmacniacza
             if now >= turn_amp_on_time and now < turn_amp_on_time + timedelta(seconds=1):
                 self.timeTo["turnAmpOn"] = True
-                logger.debug(f"Akcja: turnAmpOn dla dzwonka o {bell_time.strftime('%H:%M')}")
+                logger.info(f"Akcja: turnAmpOn dla dzwonka o {bell_time.strftime('%H:%M')}")
             
             # Odtworzenie przeddzwonka
-            if now >= prebell_time and now < prebell_time + timedelta(seconds=1):
-                self.timeTo["playPrebell"] = True
-                logger.debug(f"Akcja: playPrebell dla dzwonka o {bell_time.strftime('%H:%M')}")
+            if prebell_interval != 0:
+                if now >= prebell_time and now < prebell_time + timedelta(seconds=1):
+                    self.timeTo["playPrebell"] = True
+                    logger.info(f"Akcja: playPrebell dla dzwonka o {bell_time.strftime('%H:%M')}")
 
             # Odtworzenie dzwonka
             if now >= bell_time and now < bell_time + timedelta(seconds=1):
                 self.timeTo["playBell"] = True
-                logger.debug(f"Akcja: playBell dla dzwonka o {bell_time.strftime('%H:%M')}")
+                logger.info(f"Akcja: playBell dla dzwonka o {bell_time.strftime('%H:%M')}")
             
             # Wyłączenie wzmacniacza
             if now >= turn_amp_off_time and now < turn_amp_off_time + timedelta(seconds=1):
                 self.timeTo["turnAmpOff"] = True
-                logger.debug(f"Akcja: turnAmpOff dla dzwonka o {bell_time.strftime('%H:%M')}")
+                logger.info(f"Akcja: turnAmpOff dla dzwonka o {bell_time.strftime('%H:%M')}")
 
 
             # Znajdź następne zdarzenie (dzwonek)

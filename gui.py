@@ -29,7 +29,7 @@ class BellApp(ctk.CTk):
 
         self.title("Dzwonek")
         self.geometry("800x480")
-        self.attributes("-fullscreen", True)
+        #self.attributes("-fullscreen", True)
         self.config(cursor="none")
 
         self.frames = {} 
@@ -381,8 +381,10 @@ class SoundSettings(ctk.CTkFrame):
         """Obsługuje kliknięcie przycisku alarmu: uruchamia lub zatrzymuje alarm."""
         if self.master.music._is_alarm_playing: # Sprawdź, czy to alarm gra
             self.master.music.stopMusic()
+            self.master.music._amp_relay(state=False) # Upewnij się, że wzmacniacz jest wyłączony po zatrzymaniu dzwonka
             logger.info("Alarm zatrzymany.")
         else: # Alarm nie gra, więc go uruchom
+            self.master.music._amp_relay(state=True)
             self.master.music.playAlarm()
             logger.info("Alarm uruchomiony.")
         self._update_button_texts() # Zawsze aktualizuj teksty po zmianie stanu alarmu
@@ -569,10 +571,10 @@ class ScheduleTab(ctk.CTkFrame):
 
             MyLabel(radio_buttons_frame, text="Czas między dzwonkiem a przeddzwonkiem:").grid(row=0, column=0, columnspan=4, pady=5)
 
-            for i, interval in enumerate([0.5, 1, 1.5, 2]):
+            for i, interval in enumerate([0, 1, 1.5, 2]):
                 ctk.CTkRadioButton(
                     radio_buttons_frame,
-                    text=str(interval),
+                    text=str(interval) + " min" if interval != 0 else "Brak",
                     variable=self.interval_var,
                     value=interval,
                     font=ctk.CTkFont(family="Calibri", size=18, weight="bold"),

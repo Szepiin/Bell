@@ -5,6 +5,8 @@ import threading
 from mutagen import mp3
 import platform
 import logging
+
+from constants import MAX_MUSIC_LEN
 if platform.system() == "Windows":
     from fake_rpi.RPi import GPIO
 else:
@@ -22,7 +24,9 @@ class musicHandling:
     def __init__(self, filesPath, AMP_OUTPUT_PIN):
         try:
             # Próba normalnego uruchomienia dźwięku
-            pygame.mixer.init()
+            # frequency=44100 (Jakość CD), size=-16 (16-bit), channels=2 (Stereo), buffer=4096 (Zapobiega trzaskom)
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
+            pygame.mixer.music.set_volume(0.8)
             logger.info("Zainicjalizowano system audio.")
         except pygame.error:
             # Jeśli się nie uda (brak karty), uruchom w trybie "dummy" (cisza, ale bez błędu)
@@ -66,7 +70,7 @@ class musicHandling:
                     if os.path.exists(file_path):
                         logger.info(f"Znaleziono plik dla '{start_letter}': {file_path}")
                         return file_path
-        logger.warning(f"Nie znaleziono pliku MP3 zaczynającego się na '{start_letter}' w lokalizacji {self.soundFilesPath}. Użycie domyślnego: {self._sampleSoundLocation}")
+        #logger.warning(f"Nie znaleziono pliku MP3 zaczynającego się na '{start_letter}' w lokalizacji {self.soundFilesPath}. Użycie domyślnego: {self._sampleSoundLocation}")
         if os.path.exists(self._sampleSoundLocation):
             return self._sampleSoundLocation
         else:
@@ -77,13 +81,13 @@ class musicHandling:
     def _get_mp3_length(self, file_path):
         """Zwraca długość pliku MP3 w sekundach."""
         if not file_path or not os.path.exists(file_path):
-            return 0
+            return MAX_MUSIC_LEN
         try:
             audio = mp3.Open(file_path)
             return audio.info.length
         except Exception as e:
             logger.error(f"Błąd odczytu długości pliku MP3 {file_path}: {e}")
-            return 0 
+            return MAX_MUSIC_LEN
 
     def _amp_relay(self, state: bool):
         """
@@ -100,114 +104,93 @@ class musicHandling:
                 logger.info(f"Przekaźnik wzmacniacza GPIO {self.AMP_OUTPUT_PIN} ustawiony na: {'Włączony' if state else 'Wyłączony'}")
             except Exception as e:
                 logger.error(f"Błąd sterowania GPIO {self.AMP_OUTPUT_PIN}: {e}")
-
+    
     def _play_sound_thread(self, file_path, is_alarm=False):
         """
-        Wątek do odtwarzania dźwięku.
-        `is_alarm`: True, jeśli dźwięk to alarm (będzie odtwarzany w pętli i nadrzędnie).
+        Wątek odtwarza dźwięk i kończy go po MAX_MUSIC_LEN.
+        WAŻNE: Ten wątek NIE wyłącza wzmacniacza po zakończeniu.
         """
-        # Krytyczna sekcja: sprawdzanie stanu i rozpoczynanie odtwarzania
+        sound_duration = 0
+        if not is_alarm:
+            full_len = self._get_mp3_length(file_path)
+            sound_duration = min(full_len, MAX_MUSIC_LEN) # Max 15s
+        
         with self._play_lock:
-            # Jeśli alarm już gra i próbujemy odtworzyć coś innego niż alarm, zignoruj
             if self._is_alarm_playing and not is_alarm:
-                logger.info("Alarm już gra, inny dźwięk nie zostanie odtworzony.")
-                return
-
-            if not file_path or not os.path.exists(file_path):
-                logger.error(f"Brak pliku dźwiękowego lub plik nie istnieje: {file_path}")
                 return
 
             try:
-                # Zatrzymujemy bieżące odtwarzanie, jeśli jest aktywne
                 if pygame.mixer.music.get_busy():
                     pygame.mixer.music.stop()
-                    logger.info("Zatrzymano poprzednie odtwarzanie muzyki.")
 
+                # ZAWSZE upewnij się, że wzmacniacz jest włączony przed graniem
                 self._amp_relay(state=True)
-                time.sleep(1) # Krótka pauza na włączenie wzmacniacza
 
                 pygame.mixer.music.load(file_path)
                 if is_alarm:
-                    pygame.mixer.music.play(-1) # Odtwarzaj w nieskończoność dla alarmu
+                    pygame.mixer.music.play(-1)
                     self._is_alarm_playing = True
-                    logger.info(f"Rozpoczęto odtwarzanie alarmu (pętla): {file_path}")
+                    logger.info(f"START ALARMU: {os.path.basename(file_path)}")
                 else:
                     pygame.mixer.music.play()
-                    self._is_alarm_playing = False # Upewnij się, że flaga alarmu jest False dla dzwonków/przeddzwonków
-                    logger.info(f"Rozpoczęto odtwarzanie: {file_path}")
-            except pygame.error as e:
-                logger.error(f"Błąd Pygame podczas ładowania/odtwarzania {file_path}: {e}")
-                self._amp_relay(state=False) 
-                return # Zakończ wątek, jeśli wystąpi błąd
+                    self._is_alarm_playing = False 
+                    logger.info(f"START ODTWARZANIA: {os.path.basename(file_path)} (Max: {sound_duration:.1f}s)")
+            
             except Exception as e:
-                logger.error(f"Nieoczekiwany błąd podczas rozpoczynania odtwarzania {file_path}: {e}")
+                logger.error(f"Błąd odtwarzania: {e}")
                 self._amp_relay(state=False)
-                return # Zakończ wątek
+                return 
 
-        # Sekcja poza blokadą _play_lock: czekanie na zakończenie utworu (tylko dla dzwonków/przeddzwonków)
+        # Czekanie na koniec dźwięku
         if not is_alarm:
-            try:
-                # Odtwarzanie w nowym wątku nie blokuje UI, ale sam wątek będzie czekał
-                while pygame.mixer.music.get_busy():
-                    time.sleep(3)
-                
-                logger.info(f"Zakończono odtwarzanie: {file_path}")
-            except Exception as e:
-                logger.error(f"Błąd podczas oczekiwania na zakończenie odtwarzania {file_path}: {e}")
-            finally:
-                # Upewnij się, że wzmacniacz zostanie wyłączony po zakończeniu odtwarzania
-                # (lub jeśli wątek zostanie przerwany/zakończy się błędem)
-                self._amp_relay(state=False)
-
+            if sound_duration > 0:
+                time.sleep(sound_duration)
+            else:
+                time.sleep(3)
+            
+            # Po upływie czasu tylko zatrzymaj dźwięk (cisza)
+            # NIE WYŁĄCZAJ WZMACNIACZA - zrobi to schedule.py
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.stop()
+                logger.info("Koniec czasu odtwarzania (muzyka stop, wzmacniacz nadal ON).")
+            
+            self.isMusicStopped()
 
     def playBell(self):
-        """Odtwarza dźwięk dzwonka. Zatrzymuje poprzednie odtwarzanie."""
-        self.stopMusic() # Zatrzymuje cokolwiek gra
+        # Stopujemy poprzednie, ale nie wyłączamy wzmacniacza (false), bo zaraz będziemy grać
+        self.stopMusic(turn_amp_off=False) 
         if self._musicFileBell:
             threading.Thread(target=self._play_sound_thread, args=(self._musicFileBell, False)).start()
             self._is_bell_playing = True
-        else:
-            logger.warning("Brak pliku dzwonka do odtworzenia.")
-        self.isMusicStopped()
         
     def playPrebell(self):
-        """Odtwarza dźwięk przeddzwonka. Zatrzymuje poprzednie odtwarzanie."""
-        self.stopMusic() # Zatrzymuje cokolwiek gra
+        self.stopMusic(turn_amp_off=False)
         if self._musicFilePrebell:
             threading.Thread(target=self._play_sound_thread, args=(self._musicFilePrebell, False)).start()
             self._is_prebell_playing = True
-        else:
-            logger.warning("Brak pliku przeddzwonka do odtworzenia.")
-        self.isMusicStopped()
 
     def playAlarm(self):
-        """Odtwarza dźwięk alarmu w pętli. Zatrzymuje poprzednie odtwarzanie (w tym dzwonek/przeddzwonek)."""
-        self.stopMusic() # Zatrzymuje cokolwiek gra
+        self.stopMusic(turn_amp_off=False)
         if self._musicFileAlarm:
             threading.Thread(target=self._play_sound_thread, args=(self._musicFileAlarm, True)).start()
             self._is_alarm_playing = True
-        else:
-            logger.warning("Brak pliku alarmu do odtworzenia.")
 
-    def stopMusic(self):
-        """Zatrzymuje odtwarzanie muzyki i wyłącza wzmacniacz."""
-        with self._play_lock: # Użyj blokady, aby bezpiecznie zatrzymać odtwarzanie
+    def stopMusic(self, turn_amp_off=True):
+        """Ręczne zatrzymanie (np. przycisk w GUI). Domyślnie wyłącza wzmacniacz."""
+        with self._play_lock:
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.stop()
-                logger.info("Zatrzymano odtwarzanie muzyki.")
-            self._is_alarm_playing = False # Resetuj flagę alarmu
-            self._amp_relay(state=False) # Zawsze wyłącz wzmacniacz przy zatrzymaniu
+            self._is_alarm_playing = False
+            
+            if turn_amp_off:
+                self._amp_relay(state=False)
+                
         self.isMusicStopped()
 
     def is_playing(self):
-        """Sprawdza, czy odtwarzany jest jakikolwiek dźwięk."""
-        with self._play_lock: # Użyj blokady, aby bezpiecznie sprawdzić stan
-            return pygame.mixer.music.get_busy()
+        return pygame.mixer.music.get_busy()
     
     def isMusicStopped(self):
-        while pygame.mixer.music.get_busy():
-            pass
-        else:
+        if not pygame.mixer.music.get_busy():
             self._is_bell_playing = False
             self._is_prebell_playing = False
-            
