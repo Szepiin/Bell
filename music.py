@@ -24,7 +24,6 @@ class musicHandling:
     def __init__(self, filesPath, AMP_OUTPUT_PIN):
         try:
             # Próba normalnego uruchomienia dźwięku
-            # frequency=44100 (Jakość CD), size=-16 (16-bit), channels=2 (Stereo), buffer=4096 (Zapobiega trzaskom)
             pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
             pygame.mixer.music.set_volume(0.8)
             logger.info("Zainicjalizowano system audio.")
@@ -36,7 +35,7 @@ class musicHandling:
         self.AMP_OUTPUT_PIN = AMP_OUTPUT_PIN
         self.soundFilesPath = filesPath
         self._sampleSoundLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Files/DomyslnyDzwiek.mp3")
-        
+        self._play_id = 0
         self._play_lock = threading.Lock() 
         self._is_alarm_playing = False 
         self._is_bell_playing = False
@@ -116,6 +115,8 @@ class musicHandling:
             sound_duration = min(full_len, MAX_MUSIC_LEN) # Max 15s
         
         with self._play_lock:
+            self._play_id += 1
+            current_play_id = self._play_id
             if self._is_alarm_playing and not is_alarm:
                 return
 
@@ -147,13 +148,11 @@ class musicHandling:
                 time.sleep(sound_duration)
             else:
                 time.sleep(3)
-            
-            # Po upływie czasu tylko zatrzymaj dźwięk (cisza)
-            # NIE WYŁĄCZAJ WZMACNIACZA - zrobi to schedule.py
-            if pygame.mixer.music.get_busy():
+                
+            if self._play_id == current_play_id and pygame.mixer.music.get_busy():
                 pygame.mixer.music.stop()
                 logger.info("Koniec czasu odtwarzania (muzyka stop, wzmacniacz nadal ON).")
-            
+                
             self.isMusicStopped()
 
     def playBell(self):
@@ -178,6 +177,7 @@ class musicHandling:
     def stopMusic(self, turn_amp_off=True):
         """Ręczne zatrzymanie (np. przycisk w GUI). Domyślnie wyłącza wzmacniacz."""
         with self._play_lock:
+            self._play_id += 1
             if pygame.mixer.music.get_busy():
                 pygame.mixer.music.stop()
             self._is_alarm_playing = False

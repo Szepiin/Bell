@@ -113,9 +113,6 @@ class NotificationPopup(ctk.CTkToplevel):
         self.bind("<Button-1>", self.close_popup) # Zamyka po kliknięciu
         self.label.bind("<Button-1>", self.close_popup)
         
-
-
-
         self.attributes("-alpha", 0.95)
         self._closed = False
         self.after(duration_ms, self.close_popup) # Ustaw timer na automatyczne zamknięcie
@@ -133,15 +130,6 @@ class MyButton(ctk.CTkButton):
         kwargs.setdefault("hover", False)
         kwargs.setdefault("width", 280)
         kwargs.setdefault("height", 90)
-        kwargs.setdefault("font", ctk.CTkFont(family="Calibri", size=22, weight="bold"))
-        super().__init__(*args, **kwargs)
-
-class ScheduleButton(ctk.CTkButton):
-    """Niestandardowy przycisk z predefiniowanymi stylami."""
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("hover", False)
-        kwargs.setdefault("width", 210)
-        kwargs.setdefault("height", 80)
         kwargs.setdefault("font", ctk.CTkFont(family="Calibri", size=22, weight="bold"))
         super().__init__(*args, **kwargs)
 

@@ -7,6 +7,10 @@ USB_PATH_WINDOWS = "C:/Users/gs200/Desktop/Dzwonek"
 SCHEDULE_PATH_LINUX = "/bellCache/schedule.json"
 AUTH_PATH_LINUX = "/bellCache/auth.json"
 LOGS_PATH_LINUX = "/tmp/logs"
+
 DEFAULT_BELL_INTERVAL = 1
-MAX_MUSIC_LEN = 15
 MAX_BELLS = 40
+
+MAX_MUSIC_LEN = 30
+AMP_ON_DELAY = 10
+AMP_OFF_DELAY = 40

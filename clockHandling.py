@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-def set_system_time(hour: int, minute: int) -> bool:
+def set_system_time(hour: int, minute: int, second: int) -> bool:
     """
     Ustawia czas systemowy na podaną godzinę i minutę.
     Wymaga uprawnień administratora/roota.
@@ -14,7 +14,7 @@ def set_system_time(hour: int, minute: int) -> bool:
     """
     try:
         now = datetime.datetime.now()
-        target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        target_time = now.replace(hour=hour, minute=minute, second=second, microsecond=0)
         
         if platform.system() == "Windows":
             # Dla Windows wymagane uprawnienia administratora
@@ -40,7 +40,4 @@ def set_system_time(hour: int, minute: int) -> bool:
     except Exception as e:
         logger.error(f"Wystąpił błąd podczas ustawiania czasu systemowego: {e}")
         return False
-def is_time_valid(self):
-    now = datetime.now()
-    min_valid_date = datetime(2025, 1, 1)
-    return now > min_valid_date
+

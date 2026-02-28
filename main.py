@@ -32,10 +32,6 @@ logging.basicConfig(
 # Ustawienie zmiennej DISPLAY (może wymagać dostosowania do środowiska)
 os.environ['DISPLAY'] = ':0'
 
-def quit_plymouth():
-    os.system("sudo plymouth quit")
-
-
 def get_base_path():
     """Zwraca ścieżkę bazową dla plików w zależności od systemu operacyjnego."""
     if platform.machine() == "AMD64":
@@ -53,5 +49,4 @@ if __name__ == "__main__":
     appGui = BellApp(music=music, schedule=schedule, screensaver_time=SCREEN_SAVER_TIME_SECONDS, auth_handler=auth)
 
     appGui.mainloop()
-    appGui.after(2000, quit_plymouth)
     
